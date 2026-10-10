@@ -1,27 +1,14 @@
 import json
-from pathlib import Path
-from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from issues.models import Reporter, Issue, CriticalIssue, LowPriorityIssue
-
-REPORTERS_FILE = settings.BASE_DIR / 'reporters.json'
-ISSUES_FILE = settings.BASE_DIR / 'issues.json'
-
-
-def _load_data(file_path: Path):
-    if not file_path.exists():
-        return []
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def _save_data(file_path: Path, data):
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2)
+from issues.models import (
+    Reporter,
+    Issue,
+    CriticalIssue,
+    LowPriorityIssue,
+    ReporterModel,
+    IssueModel,
+)
 
 
 @csrf_exempt
@@ -50,21 +37,17 @@ def reporter_list_create(request):
         except Exception as err:
             return JsonResponse({'error': f"Validation error: {str(err)}"}, status=400)
 
-        reporters = _load_data(REPORTERS_FILE)
-        reporter_dict = reporter.to_dict()
-
-        # Update if existing id, else append
-        existing_index = next((i for i, r in enumerate(reporters) if r.get('id') == reporter.id), None)
-        if existing_index is not None:
-            reporters[existing_index] = reporter_dict
-        else:
-            reporters.append(reporter_dict)
-
-        _save_data(REPORTERS_FILE, reporters)
-        return JsonResponse(reporter_dict, status=201)
+        record, _ = ReporterModel.objects.update_or_create(
+            id=reporter.id,
+            defaults={
+                'name': reporter.name,
+                'email': reporter.email,
+                'team': reporter.team,
+            }
+        )
+        return JsonResponse(record.to_dict(), status=201)
 
     elif request.method == 'GET':
-        reporters = _load_data(REPORTERS_FILE)
         id_param = request.GET.get('id')
 
         if id_param is not None:
@@ -73,11 +56,12 @@ def reporter_list_create(request):
             except ValueError:
                 return JsonResponse({'error': 'Invalid id parameter'}, status=400)
 
-            for reporter in reporters:
-                if reporter.get('id') == reporter_id:
-                    return JsonResponse(reporter, status=200)
+            record = ReporterModel.objects.filter(id=reporter_id).first()
+            if record:
+                return JsonResponse(record.to_dict(), status=200)
             return JsonResponse({'error': 'Reporter not found'}, status=404)
 
+        reporters = [r.to_dict() for r in ReporterModel.objects.all()]
         return JsonResponse(reporters, safe=False, status=200)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -135,21 +119,21 @@ def issue_list_create(request):
         except Exception as err:
             return JsonResponse({'error': f"Validation error: {str(err)}"}, status=400)
 
-        response_data = issue.to_dict()
-        response_data['message'] = issue.describe()
-
-        issues = _load_data(ISSUES_FILE)
-        existing_index = next((i for i, item in enumerate(issues) if item.get('id') == issue.id), None)
-        if existing_index is not None:
-            issues[existing_index] = response_data
-        else:
-            issues.append(response_data)
-
-        _save_data(ISSUES_FILE, issues)
-        return JsonResponse(response_data, status=201)
+        record, _ = IssueModel.objects.update_or_create(
+            id=issue.id,
+            defaults={
+                'title': issue.title,
+                'description': issue.description,
+                'status': issue.status,
+                'priority': issue.priority,
+                'reporter_id': issue.reporter_id,
+                'created_at': str(issue.created_at),
+                'message': issue.describe(),
+            }
+        )
+        return JsonResponse(record.to_dict(), status=201)
 
     elif request.method == 'GET':
-        issues = _load_data(ISSUES_FILE)
         id_param = request.GET.get('id')
         status_param = request.GET.get('status')
 
@@ -159,15 +143,15 @@ def issue_list_create(request):
             except ValueError:
                 return JsonResponse({'error': 'Invalid id parameter'}, status=400)
 
-            for issue in issues:
-                if issue.get('id') == issue_id:
-                    return JsonResponse(issue, status=200)
+            record = IssueModel.objects.filter(id=issue_id).first()
+            if record:
+                return JsonResponse(record.to_dict(), status=200)
             return JsonResponse({'error': 'Issue not found'}, status=404)
 
+        records = IssueModel.objects.all()
         if status_param is not None:
-            filtered_issues = [issue for issue in issues if issue.get('status') == status_param]
-            return JsonResponse(filtered_issues, safe=False, status=200)
+            records = records.filter(status=status_param)
 
-        return JsonResponse(issues, safe=False, status=200)
+        return JsonResponse([r.to_dict() for r in records], safe=False, status=200)
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)

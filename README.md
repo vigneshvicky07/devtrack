@@ -2,28 +2,29 @@
 
 DevTrack is a lightweight Django-based REST API designed for engineering teams to report bugs, set priorities, and track issue statuses (similar to GitHub Issues). 
 
-The backend is built around core **Object-Oriented Programming (OOP)** principles using Python domain models (`BaseEntity`, `Reporter`, `Issue`, `CriticalIssue`, `LowPriorityIssue`) and persists records cleanly in JSON files (`reporters.json` and `issues.json`).
+The backend combines core **Object-Oriented Programming (OOP)** principles using Python domain models (`BaseEntity`, `Reporter`, `Issue`, `CriticalIssue`, `LowPriorityIssue`) with robust relational persistence in **PostgreSQL** (`reporters` and `issues` database tables), with automatic migration from existing JSON fixtures (`reporters.json` and `issues.json`).
 
 ---
 
 ## 🛠️ Requirements & Setup Instructions
 
-### Option A: Running with Docker (Recommended)
+### Option A: Running with Docker & PostgreSQL (Recommended)
 
-DevTrack is fully Dockerized. When the container starts, the container `entrypoint.sh` automatically runs database migrations (`python manage.py makemigrations` & `python manage.py migrate`) before starting the server.
+DevTrack is fully Dockerized with a dedicated PostgreSQL database container (`devtrack_db`) and application web container (`devtrack_api`). When the application container starts, the container `entrypoint.sh` automatically waits for PostgreSQL readiness and runs database migrations (`python manage.py makemigrations` & `python manage.py migrate`), automatically seeding initial data into PostgreSQL tables:
 
 ```bash
-# Build and launch container in background
+# Build and launch both web and PostgreSQL containers in background
 docker compose up --build -d
 
 # View container logs (including automatic startup migrations)
 docker compose logs -f web
 
-# Stop container
+# Stop containers
 docker compose down
 ```
 
 The API will be available at `http://127.0.0.1:8000/`.
+PostgreSQL is accessible from host at `localhost:5433` (Database: `devtrack`, User: `devtrack_user`, Password: `devtrack_password`).
 
 ---
 
@@ -70,10 +71,24 @@ The API will be live at `http://127.0.0.1:8000/`.
 
 ## 🧪 Running Automated Tests
 
-A comprehensive verification test suite is provided in `test_devtrack.py` to test domain models, validation rules, polymorphism, and HTTP endpoint responses (201, 200, 400, 404):
+DevTrack includes both a comprehensive Django test runner suite ([issues/tests.py](issues/tests.py) with 33 unit and integration tests) and the standalone verification script ([test_devtrack.py](test_devtrack.py)):
 
+### 1. Django Test Suite (33 Tests covering Database, OOP Domain Models, ORM, & APIs)
 ```bash
-python test_devtrack.py
+# In Docker
+docker compose exec web python manage.py test
+
+# Or locally (with SQLite fallback)
+USE_SQLITE=true python manage.py test
+```
+
+### 2. Standalone Verification Suite
+```bash
+# In Docker
+docker compose exec web python test_devtrack.py
+
+# Or locally
+USE_SQLITE=true python test_devtrack.py
 ```
 
 ---

@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from django.db import models
 
+
+# ==============================================================================
+# Domain Entities (OOP Models with Polymorphism & Business Logic)
+# ==============================================================================
 
 class BaseEntity(ABC):
     @abstractmethod
@@ -64,3 +69,65 @@ class CriticalIssue(Issue):
 class LowPriorityIssue(Issue):
     def describe(self):
         return f"{self.title} — low priority, handle when free"
+
+
+# ==============================================================================
+# Django Database ORM Models (PostgreSQL Persistence)
+# ==============================================================================
+
+class ReporterModel(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255)
+    email = models.CharField(max_length=255)
+    team = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'reporters'
+        verbose_name = 'Reporter'
+        verbose_name_plural = 'Reporters'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.name} ({self.team})"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'team': self.team,
+        }
+
+
+class IssueModel(models.Model):
+    id = models.IntegerField(primary_key=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=50)
+    priority = models.CharField(max_length=50)
+    reporter_id = models.IntegerField()
+    created_at = models.CharField(max_length=100)
+    message = models.CharField(max_length=500, blank=True, null=True)
+
+    class Meta:
+        db_table = 'issues'
+        verbose_name = 'Issue'
+        verbose_name_plural = 'Issues'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.title} [{self.priority}]"
+
+    def to_dict(self):
+        res = {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'status': self.status,
+            'priority': self.priority,
+            'reporter_id': self.reporter_id,
+            'created_at': self.created_at,
+        }
+        if self.message:
+            res['message'] = self.message
+        return res

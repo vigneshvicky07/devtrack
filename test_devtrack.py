@@ -50,11 +50,10 @@ def test_api_endpoints():
     print("\n--- Running API Endpoint Integration Tests ---")
     client = Client()
 
-    # Reset test files
-    from pathlib import Path
-    from django.conf import settings
-    (settings.BASE_DIR / 'reporters.json').write_text("[]")
-    (settings.BASE_DIR / 'issues.json').write_text("[]")
+    # Reset test database
+    from issues.models import ReporterModel, IssueModel
+    ReporterModel.objects.all().delete()
+    IssueModel.objects.all().delete()
 
     # 1. POST /api/reporters/ - Success
     resp = client.post(
@@ -173,7 +172,47 @@ def test_api_endpoints():
     print("✓ GET /api/issues/?status=open (Filtered) passed")
 
 
+def test_database_persistence():
+    print("\n--- Running Database Persistence Tests ---")
+    from django.db import connection
+    from issues.models import ReporterModel, IssueModel
+
+    connection.ensure_connection()
+    engine = connection.settings_dict['ENGINE']
+    print(f"✓ Connected to database using engine: {engine}")
+
+    # Clean test state
+    ReporterModel.objects.filter(id__gte=100).delete()
+    IssueModel.objects.filter(id__gte=100).delete()
+
+    # Create and verify ReporterModel
+    r = ReporterModel.objects.create(id=101, name="Test Dev", email="dev@test.org", team="infra")
+    assert ReporterModel.objects.filter(id=101).exists()
+    assert str(r) == "Test Dev (infra)"
+    print("✓ ReporterModel ORM persistence and __str__ passed")
+
+    # Create and verify IssueModel
+    IssueModel.objects.create(
+        id=201,
+        title="DB connection pool saturation",
+        description="Pool max size reached",
+        status="open",
+        priority="critical",
+        reporter_id=101,
+        created_at="2026-10-10",
+        message="[URGENT] DB connection pool saturation — needs immediate attention"
+    )
+    assert IssueModel.objects.filter(id=201).exists()
+    assert IssueModel.objects.filter(id=201, priority="critical").count() == 1
+    print("✓ IssueModel ORM persistence and filtering passed")
+
+    # Clean up test records
+    ReporterModel.objects.filter(id=101).delete()
+    IssueModel.objects.filter(id=201).delete()
+
+
 if __name__ == '__main__':
     test_oop_models()
+    test_database_persistence()
     test_api_endpoints()
     print("\n🎉 ALL TESTS PASSED SUCCESSFULLY! 🎉")

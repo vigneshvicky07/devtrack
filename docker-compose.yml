@@ -1,11 +1,41 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: devtrack_db
+    restart: always
+    environment:
+      POSTGRES_DB: devtrack
+      POSTGRES_USER: devtrack_user
+      POSTGRES_PASSWORD: devtrack_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devtrack_user -d devtrack"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
   web:
     build: .
     container_name: devtrack_api
+    restart: always
     ports:
       - "8000:8000"
     volumes:
-      - ./reporters.json:/app/reporters.json
-      - ./issues.json:/app/issues.json
+      - .:/app
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=devtrack
+      - DB_USER=devtrack_user
+      - DB_PASSWORD=devtrack_password
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
