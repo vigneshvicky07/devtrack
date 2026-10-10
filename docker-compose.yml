@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: devtrack_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./reporters.json:/app/reporters.json
+      - ./issues.json:/app/issues.json
+    environment:
+      - PYTHONUNBUFFERED=1
