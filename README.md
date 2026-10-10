@@ -80,19 +80,43 @@ python test_devtrack.py
 
 ---
 
-## 📸 Postman Testing & Screenshots
+## 📸 Postman / API Client Screenshots
 
-All endpoints have been tested via Postman. A ready-to-import collection is included in the root directory: [`DevTrack.postman_collection.json`](DevTrack.postman_collection.json).
+All endpoints were tested in Postman using the included collection [`DevTrack.postman_collection.json`](DevTrack.postman_collection.json). Below are the verified test results:
 
-### 1. Success Response Screenshot (`POST /api/issues/` - 201 Created)
-Creating a critical issue triggers the `CriticalIssue` model subclass and returns `201 Created` with the urgent describe banner.
+### 1. Issue Endpoint - Success (`POST /api/issues/` - `201 Created`)
+Creating a critical issue dynamically instantiates the `CriticalIssue` model subclass and returns `201 Created` with the urgent message banner:
+`[URGENT] Login button not working on mobile — needs immediate attention`
 
-![Postman Success Response](docs/screenshots/postman_success.png)
+![Create Critical Issue Success](docs/screenshots/create_critical_issue_success.png)
 
-### 2. Failure Response Screenshot (`POST /api/issues/` - 400 Bad Request)
-Submitting an issue with an empty title triggers the model's `validate()` method and returns `400 Bad Request` with the validation error message.
+---
 
-![Postman Failure Response](docs/screenshots/postman_failure.png)
+### 2. Reporter Endpoint - Failure (`POST /api/reporters/` - `400 Bad Request`)
+Submitting an invalid email (missing `@`) triggers the `Reporter.validate()` method and returns `400 Bad Request` with `{"error": "Invalid email"}`:
+
+![Create Reporter Failure](docs/screenshots/create_reporter_failure.png)
+
+---
+
+### 3. Reporter Endpoint - Success (`POST /api/reporters/` - `201 Created`)
+Registering a new team reporter:
+
+![Create Reporter Success](docs/screenshots/create_reporter_success.png)
+
+---
+
+### 4. Fetch All Reporters (`GET /api/reporters/` - `200 OK`)
+Listing all reporters stored in `reporters.json`:
+
+![Get All Reporters](docs/screenshots/get_all_reporters.png)
+
+---
+
+### 5. Fetch Single Reporter by ID (`GET /api/reporters/?id=1` - `200 OK`)
+Fetching an individual reporter by query parameter:
+
+![Get Reporter by ID](docs/screenshots/get_reporter_by_id.png)
 
 ---
 
